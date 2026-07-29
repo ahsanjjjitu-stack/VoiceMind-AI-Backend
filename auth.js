@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { OAuth2Client } = require("google-auth-library");
-const User = require("../model/users");
+const User = require("./model/users");
 
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -14,6 +14,7 @@ router.post("/google/login", async (req, res) => {
     if (!idToken) {
     return res.status(400).json({ success: false, message: "idToken is required" });
     }
+
 
 
 
