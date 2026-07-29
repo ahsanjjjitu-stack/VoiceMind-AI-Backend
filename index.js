@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const authRouters = require('./router/auth');
+const authRouters = require('./auth');
 
 // set dns servers to avoid DNS resolution issues
 const dns = require('dns');
