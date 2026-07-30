@@ -17,7 +17,16 @@ mongoose.connect(process.env.MONGO_URI)
     .then(() => console.log('Connected to MongoDB'))
     .catch((err) => console.log(err));
 
+
+
+// user auth all
+
 app.use('/api/auth', authRouters);
+
+
+
+
+
 
 
 

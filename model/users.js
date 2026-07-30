@@ -13,6 +13,33 @@ const userSchema = new mongoose.Schema({
      unique: true
    },
 
+   name: {
+    type: String,
+    default: ""
+   },
+
+   profession: {
+    type: String,
+    default: ""
+   },
+
+   bio: {
+     type: String, 
+     default: "" 
+    },
+
+
+  isProfileComplete: { 
+    type: Boolean, 
+    default: false
+   },
+
+
+  updatedAt: {
+     type: Date,
+      default: Date.now
+     },
+
    createAt: {
      type: Date,
      default: Date.now
