@@ -75,26 +75,30 @@ router.post("/google-login", async (req, res) => {
 
 
 
-// profile update router
 
+// profile update router
 router.post("/update-profile", async (req, res) => {
     const { userId, name, profession, bio } = req.body;
 
-    // Validation
-    if (!userId || !name || !profession || !bio) {
-        return res.status(400).json({ success: false, message: "All fields are required" });
+    // Validation Check
+    if (!userId) {
+        return res.status(400).json({ success: false, message: "userId প্রয়োজন!" });
+    }
+
+    if (!name || name.trim() === "") {
+        return res.status(400).json({ success: false, message: "Name required!" });
     }
 
     try {
-        // Fix: Pass { _id: userId } object in query
-        const updatedUser = await User.findOneAndUpdate(
-            { _id: userId }, 
+        // findByIdAndUpdate দিয়ে সোজাসুজি _id ধরে আপডেট
+        const updatedUser = await User.findByIdAndUpdate(
+            userId, 
             {
-                name: name,
-                profession: profession ? profession : "",
-                bio: bio ? bio : "",
-                isProfileUpdated: true,
-                updatedAt: Date.now(),
+                name: name.trim(),
+                profession: profession ? profession.trim() : "",
+                bio: bio ? bio.trim() : "",
+                isProfileComplete: true, // Schema এর সাথে হুবহু মেলানো হয়েছে
+                updatedAt: Date.now()
             }, 
             { new: true }
         );
@@ -106,16 +110,16 @@ router.post("/update-profile", async (req, res) => {
             });
         }
 
+        // Response sending in root JSON structure (তুই যেভাবে অ্যান্ড্রয়েডে একসেস করছিস)
         res.status(200).json({
             success: true,
             message: "প্রোফাইল সফলভাবে আপডেট হয়েছে! 🔥",
-            id: updatedUser._id,
+            id: updatedUser._id.toString(),
             email: updatedUser.email,
             name: updatedUser.name,
             profession: updatedUser.profession,
             bio: updatedUser.bio,
-            isProfileUpdated: updatedUser.isProfileUpdated
-            
+            isProfileComplete: updatedUser.isProfileComplete
         });
 
     } catch (error) {
@@ -123,7 +127,6 @@ router.post("/update-profile", async (req, res) => {
         res.status(500).json({ success: false, message: "Internal Server Error" });
     }
 });
-
 
 
 
