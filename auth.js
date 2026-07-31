@@ -109,14 +109,13 @@ router.post("/update-profile", async (req, res) => {
         res.status(200).json({
             success: true,
             message: "প্রোফাইল সফলভাবে আপডেট হয়েছে! 🔥",
-            user: {
-                id: updatedUser._id,
-                email: updatedUser.email,
-                name: updatedUser.name,
-                profession: updatedUser.profession,
-                bio: updatedUser.bio,
-                isProfileUpdated: updatedUser.isProfileUpdated
-            }
+            id: updatedUser._id,
+            email: updatedUser.email,
+            name: updatedUser.name,
+            profession: updatedUser.profession,
+            bio: updatedUser.bio,
+            isProfileUpdated: updatedUser.isProfileUpdated
+            
         });
 
     } catch (error) {
