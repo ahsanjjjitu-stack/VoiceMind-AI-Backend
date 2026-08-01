@@ -1,11 +1,12 @@
 const express = require("express");
 const router = express.Router();
+const mongoose = require("mongoose"); // 👈 ১. mongoose Import ফিক্সড
 const { OAuth2Client } = require("google-auth-library");
 const User = require("./model/users");
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// 1. Google Login Router
+// 1. Google Login Router (Fixed & Robust)
 router.post("/google-login", async (req, res) => {
     const { idToken } = req.body;
 
@@ -22,26 +23,31 @@ router.post("/google-login", async (req, res) => {
         const payload = ticket.getPayload();
         const { sub: googleId, email } = payload;
 
-        let user = await User.findOne({ googleId });
+        console.log("--> Google Login Attempt for Email:", email);
 
-        if (!user) {
-            user = new User({
-                googleId,
-                email,
-            });
-            await user.save();
-        }
+        // upsert: true দিলে ইউজার না থাকলে অটো সেভ করবে, থাকলে আপডেট করবে
+        let user = await User.findOneAndUpdate(
+            { email: email }, 
+            { 
+                $setOnInsert: { googleId: googleId, createAt: Date.now() },
+                $set: { updatedAt: Date.now() }
+            },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
+
+        console.log("✅ User Saved/Found in DB with ID:", user._id.toString());
 
         res.status(200).json({
             success: true,
             message: "User logged in successfully",
-            userId: user._id,
-            email: user.email
+            userId: user._id.toString(), 
+            email: user.email,
+            isProfileComplete: user.isProfileComplete || false
         });
 
     } catch (error) {
-        console.error("Google Auth Error:", error);
-        res.status(401).json({ success: false, message: "Invalid Google Token" });
+        console.error("❌ Google Auth Error:", error);
+        res.status(500).json({ success: false, message: "Google authentication failed" });
     }
 });
 
@@ -49,22 +55,27 @@ router.post("/google-login", async (req, res) => {
 router.post("/update-profile", async (req, res) => {
     console.log("--> Incoming Body:", req.body);
 
-    // Single time destructuring
     const { userId, name, profession, bio } = req.body;
 
-    // Validation Check
+    // Validation 1: userId missing check
     if (!userId) {
         console.log("❌ Error: userId is missing");
         return res.status(400).json({ success: false, message: "userId প্রয়োজন!" });
     }
 
+    // Validation 2: Invalid Mongo ObjectId check (🚨 CastError prevention)
+    if (!mongoose.isValidObjectId(userId)) {
+        console.log("❌ Error: Invalid Mongo ObjectId ->", userId);
+        return res.status(400).json({ success: false, message: "অবৈধ userId ফরম্যাট!" });
+    }
+
+    // Validation 3: Name check
     if (!name || (typeof name === 'string' && name.trim() === "")) {
         console.log("❌ Error: name is missing or empty");
         return res.status(400).json({ success: false, message: "Name required!" });
     }
 
     try {
-        // Construct clean update object
         const updateData = {
             name: name.toString().trim(),
             profession: profession ? profession.toString().trim() : "",
@@ -73,7 +84,6 @@ router.post("/update-profile", async (req, res) => {
             updatedAt: Date.now()
         };
 
-        // Update directly using findByIdAndUpdate
         const updatedUser = await User.findByIdAndUpdate(
             userId, 
             updateData, 
@@ -87,10 +97,11 @@ router.post("/update-profile", async (req, res) => {
             });
         }
 
-        // Response sending
+        // Clean Response
         res.status(200).json({
             success: true,
             message: "প্রোফাইল সফলভাবে আপডেট হয়েছে! 🔥",
+            userId: updatedUser._id.toString(), // 👈 অ্যান্ড্রয়েডের সুবিধার্থে userId এবং id দুটোই রাখা নিরাপদ
             id: updatedUser._id.toString(),
             email: updatedUser.email,
             name: updatedUser.name,
