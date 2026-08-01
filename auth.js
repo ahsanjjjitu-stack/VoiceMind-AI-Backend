@@ -81,13 +81,20 @@ router.post("/update-profile", async (req, res) => {
     const { userId, name, profession, bio } = req.body;
 
     // Validation Check
+console.log("--> Incoming Body:", req.body);
+
+    const { userId, name, profession, bio } = req.body;
+
     if (!userId) {
+        console.log("❌ Error: userId is missing");
         return res.status(400).json({ success: false, message: "userId প্রয়োজন!" });
     }
 
     if (!name || name.trim() === "") {
+        console.log("❌ Error: name is missing");
         return res.status(400).json({ success: false, message: "Name required!" });
     }
+    
 
     try {
         // findByIdAndUpdate দিয়ে সোজাসুজি _id ধরে আপডেট
