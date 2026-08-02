@@ -1,10 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const mongoose = require("mongoose"); // 👈 ১. mongoose Import ফিক্সড
+const mongoose = require("mongoose"); 
 const { OAuth2Client } = require("google-auth-library");
 const User = require("./model/users");
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+
+
 
 // 1. Google Login Router (Fixed & Robust)
 router.post("/google-login", async (req, res) => {
@@ -14,42 +17,67 @@ router.post("/google-login", async (req, res) => {
         return res.status(400).json({ success: false, message: "idToken is required" });
     }
 
+
+
     try {
+
         const ticket = await client.verifyIdToken({
             idToken: idToken,
             audience: process.env.GOOGLE_CLIENT_ID,
         });
 
+
+
         const payload = ticket.getPayload();
         const { sub: googleId, email } = payload;
 
+
+
         console.log("--> Google Login Attempt for Email:", email);
 
-        // upsert: true দিলে ইউজার না থাকলে অটো সেভ করবে, থাকলে আপডেট করবে
         let user = await User.findOneAndUpdate(
-            { email: email }, 
-            { 
-                $setOnInsert: { googleId: googleId, createAt: Date.now() },
-                $set: { updatedAt: Date.now() }
-            },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
-        );
+              { email: email },
+              {
+                  $setOnInsert: { googleId: googleId, createdAt: Date.now() },
+                  $set: { updatedAt: Date.now() }
+              },
+                 { new: true, upsert: true, setDefaultsOnInsert: true }
+          );
 
-        console.log("✅ User Saved/Found in DB with ID:", user._id.toString());
 
+        console.log("✅ Google Auth Successful for UserId:", user._id.toString());
+
+
+
+
+      // Response-এ শুধু userId আর email পাঠানো হচ্ছে
         res.status(200).json({
             success: true,
-            message: "User logged in successfully",
-            userId: user._id.toString(), 
-            email: user.email,
-            isProfileComplete: user.isProfileComplete || false
+            message: "লগইন সফল হয়েছে!",
+            userId: user._id.toString(),
+            email: user.email
         });
+
+
 
     } catch (error) {
         console.error("❌ Google Auth Error:", error);
-        res.status(500).json({ success: false, message: "Google authentication failed" });
+        res.status(401).json({ success: false, message: "Invalid Google Token" });
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 2. Profile Update Router
 router.post("/update-profile", async (req, res) => {
