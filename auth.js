@@ -78,7 +78,7 @@ router.post("/google-login", async (req, res) => {
 
 
 // user information fetch
-app.post("/user-info", async (req, res) => {
+router.post("/user-info", async (req, res) => {
 
 
     console.log("--> Save Profile Request Body:", req.body);
