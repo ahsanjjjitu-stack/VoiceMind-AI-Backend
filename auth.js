@@ -75,4 +75,91 @@ router.post("/google-login", async (req, res) => {
 
 
 
+
+
+// user information fetch
+app.post("/user-info", async (req, res) => {
+
+
+    console.log("--> Save Profile Request Body:", req.body);
+
+
+    const { userId, name, email, profession, bio } = req.body;
+
+
+    if (!userId) {
+        return res.status(400).json({ success: false, message: "userId প্রয়োজন!" });
+    }
+
+    // Validation 2: Mongo ObjectId check
+    if (!mongoose.isValidObjectId(userId)) {
+        return res.status(400).json({ success: false, message: "অবৈধ userId ফরম্যাট!" });
+    }
+
+    // Validation 3: Name & Email check
+    if (!name || name.trim() === "") {
+        return res.status(400).json({ success: false, message: "Name required!" });
+    }
+    if (!email || email.trim() === "") {
+        return res.status(400).json({ success: false, message: "Email required!" });
+    }
+
+
+
+
+    try {
+
+        // Check if user exists
+        const updateProfile = await userInfo.findOneAndUpdate(
+            { userId: userId },
+            {
+                set: {
+                    name: name.trim(),
+                    email: email.trim(),
+                    profession: profession ? profession.trim() : "",
+                    bio: bio ? bio.trim() : ""
+                }
+            },
+            { new: true, upsert: true, setDefaultsOnInsert: true }
+        );
+                
+            
+
+        console.log("✅ Profile Saved/Updated for UserId:", userId);
+
+
+      res.status(200).json({
+         success: true,
+         message: "প্রোফাইল সফলভাবে সেভ হয়েছে! 🔥",
+       userId: updatedProfile.userId.toString(),
+    name: updatedProfile.name,
+    email: updatedProfile.email,
+    profession: updatedProfile.profession,
+    bio: updatedProfile.bio
+});
+        
+
+
+
+    }
+    catch (error) {
+        console.error("❌ User Info Save Error:", error);
+        res.status(500).json({ success: false, message: "User info save failed!" });
+    }
+
+
+
+
+});
+
+
+
+
+
+
+
+
+
+
+
 module.exports = router;
