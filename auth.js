@@ -3,6 +3,7 @@ const router = express.Router();
 const mongoose = require("mongoose"); 
 const { OAuth2Client } = require("google-auth-library");
 const User = require("./model/users");
+const UserInfo = require("./models/UserInfo"); 
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -110,7 +111,7 @@ router.post("/user-info", async (req, res) => {
     try {
 
         // Check if user exists
-        const updateProfile = await userInfo.findOneAndUpdate(
+        const updateProfile = await UserInfo.findOneAndUpdate(
             { userId: userId },
             {
                 set: {
