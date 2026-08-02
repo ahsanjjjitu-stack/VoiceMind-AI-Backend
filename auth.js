@@ -80,77 +80,48 @@ router.post("/google-login", async (req, res) => {
 
 // user information fetch
 router.post("/user-info", async (req, res) => {
-
-
-    console.log("--> Save Profile Request Body:", req.body);
-
+    console.log("--> Received Body in Backend:", req.body); 
 
     const { userId, name, email, profession, bio } = req.body;
 
-
-    if (!userId) {
-        return res.status(400).json({ success: false, message: "userId প্রয়োজন!" });
+    if (!userId || !mongoose.isValidObjectId(userId)) {
+        return res.status(400).json({ success: false, message: "Valid userId প্রয়োজন!" });
     }
 
-    // Validation 2: Mongo ObjectId check
-    if (!mongoose.isValidObjectId(userId)) {
-        return res.status(400).json({ success: false, message: "অবৈধ userId ফরম্যাট!" });
+    if (!name || !email) {
+        return res.status(400).json({ success: false, message: "Name এবং Email পাঠাতে হবে!" });
     }
-
-    // Validation 3: Name & Email check
-    if (!name || name.trim() === "") {
-        return res.status(400).json({ success: false, message: "Name required!" });
-    }
-    if (!email || email.trim() === "") {
-        return res.status(400).json({ success: false, message: "Email required!" });
-    }
-
-
-
 
     try {
-
-        // Check if user exists
-        const updateProfile = await UserInfo.findOneAndUpdate(
-            { userId: userId },
+        const updatedProfile = await UserInfo.findOneAndUpdate(
+            { userId: new mongoose.Types.ObjectId(userId) },
             {
-                set: {
-                    name: name.trim(),
-                    email: email.trim(),
-                    profession: profession ? profession.trim() : "",
-                    bio: bio ? bio.trim() : ""
+                $set: {
+                    name: name,
+                    email: email,
+                    profession: profession,
+                    bio: bio
                 }
             },
-            { new: true, upsert: true, setDefaultsOnInsert: true }
+            { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
         );
-                
-            
 
-        console.log("✅ Profile Saved/Updated for UserId:", userId);
+        console.log("✅ Saved Document:", updatedProfile);
 
+        res.status(200).json({
+            success: true,
+            message: "প্রোফাইল সফলভাবে সেভ হয়েছে! 🔥",
+            userId: updatedProfile.userId.toString(),
+            name: updatedProfile.name,
+            email: updatedProfile.email,
+            profession: updatedProfile.profession,
+            bio: updatedProfile.bio
+        });
 
-      res.status(200).json({
-         success: true,
-         message: "প্রোফাইল সফলভাবে সেভ হয়েছে! 🔥",
-       userId: updatedProfile.userId.toString(),
-    name: updatedProfile.name,
-    email: updatedProfile.email,
-    profession: updatedProfile.profession,
-    bio: updatedProfile.bio
-});
-        
-
-
-
+    } catch (error) {
+        console.error("❌ Save Profile Error:", error);
+        res.status(500).json({ success: false, message: "User info save failed!", error: error.message });
     }
-    catch (error) {
-        console.error("❌ User Info Save Error:", error);
-        res.status(500).json({ success: false, message: "User info save failed!" });
-    }
-
-
-
-
 });
 
 
