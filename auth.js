@@ -3,7 +3,7 @@ const router = express.Router();
 const mongoose = require("mongoose"); 
 const { OAuth2Client } = require("google-auth-library");
 const User = require("./model/users");
-const UserInfo = require("./models/UserInfo"); 
+const UserInfo = require("./models/userInfo"); 
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
