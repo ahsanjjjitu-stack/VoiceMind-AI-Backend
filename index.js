@@ -3,6 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const authRouters = require('./auth');
+const recordingRouters = require('./recordingai');
 
 // set dns servers to avoid DNS resolution issues
 const dns = require('dns');
@@ -22,6 +23,12 @@ mongoose.connect(process.env.MONGO_URI)
 // user auth all
 
 app.use('/api/auth', authRouters);
+
+
+// recording routes
+app.use('/api/recording', recordingRouters);
+
+
 
 
 
