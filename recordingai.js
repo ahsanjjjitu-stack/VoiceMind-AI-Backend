@@ -67,9 +67,26 @@ router.post("/process-recording", upload.single("audio"), async (req, res) => {
         // gemini ai file upload for transcript and summary
         console.log("--> Processing Recording with Gemini AI...");
 
+     let mimeType = audioFile.mimetype;
+        if (!mimeType || mimeType === 'application/octet-stream') {
+            if (audioFile.originalname && audioFile.originalname.endsWith('.mp3')) {
+                mimeType = 'audio/mp3';
+            } else if (audioFile.originalname && audioFile.originalname.endsWith('.wav')) {
+                mimeType = 'audio/wav';
+            } else {
+                mimeType = 'audio/m4a'; // অ্যান্ড্রয়েডের জন্য ডিফোল্ট
+            }
+        }
+
+        console.log(`--> Uploading audio to Gemini AI File API with mimeType: ${mimeType}...`);
+
+        // 2. Gemini-তে Config এর ভেতর mimeType পাস করা
         const uploadResult = await ai.files.upload({
             file: localFilePath,
-            mimeType: audioFile.mimetype || "audio/m4a"
+            mimeType: mimeType, // 👈 সরাসরি
+            config: {
+                mimeType: mimeType // 👈 এবং config অবজেক্টের ভেতরেও রাখা হলো
+            }
         });
         
 
