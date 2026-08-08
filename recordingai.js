@@ -66,10 +66,14 @@ router.post("/process-recording", upload.single("audio"), async (req, res) => {
         console.log(`--> Uploading audio to Gemini AI File API with mimeType: ${mimeType}...`);
 
         // 1. Gemini File API তে ফাইল আপলোড
-        const uploadResult = await ai.files.upload({
+       const uploadResult = await ai.files.upload({
             file: localFilePath,
-            mimeType: mimeType,
-        });
+            config: {
+            mimeType: mimeType // 👈 আসল সমাধান এখানে
+           }
+          });
+
+          
 
         console.log("--> Gemini File Uploaded successfully. Generating Transcript & Summary...");
 
