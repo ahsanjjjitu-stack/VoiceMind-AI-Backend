@@ -7,10 +7,8 @@ const fs = require("fs");
 const { GoogleGenAI } = require("@google/genai");
 const Recording = require("./model/model.recording");
 
-
 // multer config
-const upload = multer({dest: "uploads/"});
-
+const upload = multer({ dest: "uploads/" });
 
 // cloudinary config
 cloudinary.config({
@@ -19,40 +17,31 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-
-
-// gemini ai clinet initialization
+// gemini ai client initialization
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
 
 // router , audio file upload and cloudinary save and server save 
 router.post("/process-recording", upload.single("audio"), async (req, res) => {
-
     let localFilePath = null;
 
-
     try {
-
         const { userId, category } = req.body;
         const audioFile = req.file;
 
-
         if (!audioFile) {
-            return res.status(400).json({ success: false, message: "অডিও ফাইল পাওয়া যায়নি!" });
+            return res.status(400).json({ success: false, message: "অডিও ফাইল পাওয়া যায়নি!" });
         }
 
         if (!userId || !mongoose.isValidObjectId(userId)) {
-            return res.status(400).json({ success: false, message: "Valid userId প্রয়োজন!" });
+            return res.status(400).json({ success: false, message: "Valid userId প্রয়োজন!" });
         }
 
         localFilePath = audioFile.path;
 
         console.log("--> Uploading audio to Cloudinary...");
 
-
-
-        // cloudinary uploaded in audio file 
-        const cloudinaryResult = await cloudinary.uploader.upload(audioFile.path, {
+        // cloudinary upload
+        const cloudinaryResult = await cloudinary.uploader.upload(localFilePath, {
             resource_type: "video",
             folder: "voicemind_recordings",
         });
@@ -60,42 +49,30 @@ router.post("/process-recording", upload.single("audio"), async (req, res) => {
         const audioUrl = cloudinaryResult.secure_url;
         console.log("✅ Cloudinary Audio URL Generated:", audioUrl);
 
-
-
-
-
-        // gemini ai file upload for transcript and summary
+        // gemini ai file upload setup
         console.log("--> Processing Recording with Gemini AI...");
 
-     let mimeType = audioFile.mimetype;
-        if (!mimeType || mimeType === 'application/octet-stream') {
+        let mimeType = audioFile.mimetype;
+        if (!mimeType || mimeType === 'application/octet-stream' || mimeType === 'audio/*') {
             if (audioFile.originalname && audioFile.originalname.endsWith('.mp3')) {
                 mimeType = 'audio/mp3';
             } else if (audioFile.originalname && audioFile.originalname.endsWith('.wav')) {
                 mimeType = 'audio/wav';
             } else {
-                mimeType = 'audio/m4a'; // অ্যান্ড্রয়েডের জন্য ডিফোল্ট
+                mimeType = 'audio/m4a'; // অ্যান্ড্রয়েডের জন্য ডিফল্ট
             }
         }
 
         console.log(`--> Uploading audio to Gemini AI File API with mimeType: ${mimeType}...`);
 
-        // 2. Gemini-তে Config এর ভেতর mimeType পাস করা
+        // 1. Gemini File API তে ফাইল আপলোড
         const uploadResult = await ai.files.upload({
             file: localFilePath,
-            mimeType: mimeType, // 👈 সরাসরি
-            config: {
-                mimeType: mimeType // 👈 এবং config অবজেক্টের ভেতরেও রাখা হলো
-            }
+            mimeType: mimeType,
         });
-        
-
 
         console.log("--> Gemini File Uploaded successfully. Generating Transcript & Summary...");
 
-
-
-        // prompt for gemini ai 
         // Multilingual Prompt for Gemini AI
         const prompt = `
         You are an AI assistant processing an audio recording.
@@ -110,34 +87,34 @@ router.post("/process-recording", upload.single("audio"), async (req, res) => {
         - If the audio is in Bangla, the output JSON values MUST be in Bangla script.
         - Do NOT translate the content to English unless the audio itself is in English.
 
-         Please format your response strictly in valid JSON as shown below:
-         {
-        "title": "Short Title Here",
-        "transcript": "Full speech transcript here...",
-        "summary": [
-        "Key takeaway point 1",
-        "Key takeaway point 2",
-        "Key takeaway point 3"
-        ]
+        Please format your response strictly in valid JSON as shown below:
+        {
+          "title": "Short Title Here",
+          "transcript": "Full speech transcript here...",
+          "summary": [
+            "Key takeaway point 1",
+            "Key takeaway point 2",
+            "Key takeaway point 3"
+          ]
         }
         `;
 
-
-
-
-
-
-        // generate connect with gemini ai 
+        // 2. generateContent-এ সঠিকভাবে fileData ডিফাইন করা
         const response = await ai.models.generateContent({
             model: "gemini-2.5-flash",
-            contents: [uploadResult, prompt],
+            contents: [
+                {
+                    fileData: {
+                        mimeType: uploadResult.mimeType || mimeType,
+                        fileUri: uploadResult.uri
+                    }
+                },
+                prompt
+            ],
             config: {
                 responseMimeType: "application/json"
             }
         });
-
-
-
 
         // parse ai json 
         const aiData = JSON.parse(response.text);
@@ -147,10 +124,6 @@ router.post("/process-recording", upload.single("audio"), async (req, res) => {
         const summary = Array.isArray(aiData.summary) ? aiData.summary : [];
 
         console.log("✅ AI Response Generated Successfully!");
-
-
-
-
 
         // 3. Save Recording to MongoDB
         const newRecording = new Recording({
@@ -162,20 +135,12 @@ router.post("/process-recording", upload.single("audio"), async (req, res) => {
             summary: summary
         });
 
-        await recording.save();
-
-
-
-        // 4. Temporary local file cleanup
-        if (fs.existsSync(localFilePath)) {
-            fs.unlinkSync(localFilePath);
-        }
-
-
-
+        // ⚠️ আপনার কোডে "recording.save()" ছিল, সেটা ঠিক করে "newRecording.save()" করা হয়েছে
+        await newRecording.save();
 
         console.log("✅ Recording Session Saved to Database!");
-        res.status(200).json({
+        
+        return res.status(200).json({
             success: true,
             message: "Recording Session Saved to Database!",
             recording: {
@@ -189,22 +154,19 @@ router.post("/process-recording", upload.single("audio"), async (req, res) => {
             }
         });
 
-        
-
+    } catch (error) {
+        console.error("❌ Process Recording Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Recording processing failed!",
+            error: error.message
+        });
+    } finally {
+        // 4. Cleanup local file in finally block so it always deletes
+        if (localFilePath && fs.existsSync(localFilePath)) {
+            fs.unlinkSync(localFilePath);
+        }
     }
-    catch(error){
-           console.error("❌ Process Recording Error:", error);
-            res.status(500).json({ 
-            success: false, 
-            message: "Recording processing failed!", 
-            error: error.message 
-        });             
-    }
-    
 });
 
-
-
-
 module.exports = router;
-
