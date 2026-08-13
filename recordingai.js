@@ -307,4 +307,58 @@ router.get("/all-recordings/:userId", async (req, res) => {
 
 
 
+
+
+
+// Delete a specific recording
+router.delete("/delete-recordings/:id", async (req, res) => {
+
+    try {
+
+        const { id } = req.params;
+
+        if (!id || !mongoose.isValidObjectId(id)) {
+            return res.status(400).json({ success: false, message: "Need valid Recording ID!" });
+        }
+
+
+        const deleteRecording = await Recording.findByIdAndDelete(id);
+
+        if (!deleteRecording) {
+            return res.status(404).json({ success: false, message: "Recording not found!" });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: "Session deleted successfully!"
+        });
+
+
+    }
+    catch(error){
+        console.error("❌ Delete Recording Error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete recording!",
+            error: error.message
+        });
+    }
+
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 module.exports = router;
