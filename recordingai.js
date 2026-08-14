@@ -353,6 +353,91 @@ router.delete("/delete-recordings/:id", async (req, res) => {
 
 
 
+// search router
+
+router.get("/search-recordings/:userId", async (req, res) => {
+
+    try {
+
+        const { userId } = req.params;
+        const query = req.query.query || "";
+        const category = req.query.category || "";
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+
+        if (!userId || !mongoose.isValidObjectId(userId)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Need valid userId!" 
+            });
+        }
+
+
+        const userObjectId = new mongoose.Types.ObjectId(userId);
+
+
+        let filter = { userId: userObjectId };
+
+
+        if (category && category.toLowerCase() !== "all") {
+            filter.category = { $regex: new RegExp(`^${category}$`, "i") }; // Case-insensitive
+        }
+
+
+        if (query.trim() != null){
+            const searchRegex = new RegExp(query.trim(), "i"); // Case-insensitive
+            filter.$or = [
+                { title: searchRegex },
+                { transcript: searchRegex },
+                { category: searchRegex },
+                { summary: searchRegex }
+            ];
+        }
+
+
+
+        const recordings = await Recording.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+
+
+        const totalFound = await Recording.countDocuments(filter);
+        const hasMore = skip + recordings.length < totalFound;
+
+
+
+
+        return res.status(200).json({
+            success: true,
+            currentPage: page,
+            totalPages: Math.ceil(totalFound / limit),
+            hasMore: hasMore,
+            totalFound: totalFound, 
+            recordings: recordings
+        });
+
+
+
+
+    }
+    catch(error){
+         console.error("❌ Search Recordings Error:", error);
+         return res.status(500).json({
+            success: false,
+            message: "Failed to search recordings!",
+            error: error.message
+        });
+    }
+    
+
+});
+
+
+
+
 
 
 
